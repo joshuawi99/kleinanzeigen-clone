@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
     if (token && username) {
       setUser({ token, username });
     }
-    setLoading(false); // ✅ Wichtig: wird nach dem Check auf false gesetzt
+    setLoading(false); // ✅ Ladezustand beenden
   }, []);
 
   const login = (token, username) => {
@@ -27,8 +27,10 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  if (loading) return <p className="text-center mt-10">🔄 Lade Benutzerstatus...</p>; // 🕓 Optional
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

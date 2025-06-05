@@ -2,9 +2,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import CreateAd from './pages/CreateAd';            // 👈 NEU
+import CreateAd from './pages/CreateAd';
+import MyAds from './pages/MyAds'; // ✅ NEU
 import Header from './components/Header';
-import PrivateRoute from './components/PrivateRoute'; // 👈 NEU
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
@@ -14,13 +15,23 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
-        {/* Geschützte Route für Anzeige erstellen */}
+
+        {/* Geschützte Route: Anzeige erstellen */}
         <Route
           path="/create"
           element={
             <PrivateRoute>
               <CreateAd />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Geschützte Route: Meine Anzeigen */}
+        <Route
+          path="/meine-anzeigen"
+          element={
+            <PrivateRoute>
+              <MyAds />
             </PrivateRoute>
           }
         />
