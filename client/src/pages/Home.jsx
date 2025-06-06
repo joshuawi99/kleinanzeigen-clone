@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { fetchAds } from '../services/api';
 import AdCard from '../components/AdCard';
 import TokenDebug from '../components/TokenDebug'; // 🧪
+import { AuthContext } from '../context/AuthContext';
 
 function Home() {
   const [ads, setAds] = useState([]);
@@ -9,6 +10,7 @@ function Home() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [sortOption, setSortOption] = useState('');
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
     fetchAds()
@@ -28,6 +30,10 @@ function Home() {
       return new Date(b.createdAt) - new Date(a.createdAt); // Neueste zuerst
     });
 
+  const handleDelete = (deletedId) => {
+    setAds(prevAds => prevAds.filter(ad => ad._id !== deletedId));
+  };
+
   if (loading) return <p className="text-center mt-10">Lade Anzeigen...</p>;
 
   return (
@@ -43,7 +49,7 @@ function Home() {
         >
           <option value="">Alle Kategorien</option>
           {Array.from(new Set(ads.map(ad => ad.category)))
-            .filter(cat => cat) // Entfernt falsy Werte
+            .filter(cat => cat)
             .map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
@@ -56,7 +62,7 @@ function Home() {
         >
           <option value="">Alle Orte</option>
           {Array.from(new Set(ads.map(ad => ad.location)))
-            .filter(loc => loc) // Entfernt falsy Werte
+            .filter(loc => loc)
             .map(loc => (
               <option key={loc} value={loc}>{loc}</option>
             ))}
@@ -79,7 +85,7 @@ function Home() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredAds.map(ad => (
-            <AdCard key={ad._id} ad={ad} />
+            <AdCard key={ad._id} ad={ad} onDelete={handleDelete} user={user} />
           ))}
         </div>
       )}

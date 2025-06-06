@@ -81,6 +81,25 @@ router.put('/:id', auth, upload.single('image'), async (req, res) => {
   }
 });
 
+// DELETE: Anzeige löschen (nur vom Eigentümer)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const ad = await Ad.findById(req.params.id);
+    if (!ad) return res.status(404).json({ error: 'Anzeige nicht gefunden' });
+
+    // Prüfe, ob der angemeldete Nutzer Eigentümer ist
+    if (ad.userId.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Nicht berechtigt' });
+    }
+
+    await Ad.deleteOne({ _id: req.params.id });
+    res.json({ message: 'Anzeige gelöscht' });
+  } catch (err) {
+    console.error('Fehler beim Löschen:', err);
+    res.status(500).json({ error: 'Fehler beim Löschen der Anzeige' });
+  }
+});
+
 // GET: Alle Anzeigen (für öffentliche Ansicht)
 router.get('/', async (req, res) => {
   try {
@@ -103,7 +122,7 @@ router.get('/my', auth, async (req, res) => {
   }
 });
 
-// NEU: GET einzelne Anzeige nach ID
+// GET einzelne Anzeige nach ID
 router.get('/:id', async (req, res) => {
   try {
     const ad = await Ad.findById(req.params.id);

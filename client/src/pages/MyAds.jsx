@@ -6,6 +6,7 @@ function MyAds() {
   const { user } = useContext(AuthContext);
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);  // Fehlerstatus
 
   useEffect(() => {
     fetch('http://localhost:5000/api/ads/my', {
@@ -14,12 +15,24 @@ function MyAds() {
       }
     })
       .then(res => res.json())
-      .then(data => setAds(data))
-      .catch(err => console.error(err))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAds(data);
+          setError(null);
+        } else {
+          setError('Unerwartete Antwort vom Server');
+          setAds([]);
+        }
+      })
+      .catch(err => {
+        setError('Fehler beim Laden der Anzeigen');
+        setAds([]);
+      })
       .finally(() => setLoading(false));
   }, [user]);
 
   if (loading) return <p className="text-center mt-10">Lade deine Anzeigen...</p>;
+  if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
@@ -29,7 +42,7 @@ function MyAds() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {ads.map(ad => (
-            <AdCard key={ad._id} ad={ad} user={user} />
+            <AdCard key={ad._id} ad={ad} />
           ))}
         </div>
       )}
