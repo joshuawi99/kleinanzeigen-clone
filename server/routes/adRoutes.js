@@ -5,18 +5,71 @@ const Ad = require('../models/Ad');
 const axios = require('axios');
 const auth = require('../middleware/auth');
 
-// POST: Neue Anzeige mit Bild, Kategorie, PLZ → Ort und User-ID speichern
+// Funktion: Adresse zu Koordinaten und Adresse mit Nominatim
+async function getCoordinates(street, houseNumber, zipCode, city) {
+  try {
+    let queryParts = [];
+    if (street) queryParts.push(street);
+    if (houseNumber) queryParts.push(houseNumber);
+    if (zipCode) queryParts.push(zipCode);
+    if (city) queryParts.push(city);
+    queryParts.push('Germany'); // Land als Teil der Suche
+
+    const query = queryParts.join(', ');
+
+    const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+      params: {
+        q: query,
+        format: 'json',
+        addressdetails: 1,
+        limit: 1,
+      },
+      headers: {
+        'User-Agent': 'Kleinanzeigen-App (deine-email@domain.de)'
+      }
+    });
+
+    if (response.data.length === 0) return null;
+    const place = response.data[0];
+    const addr = place.address || {};
+
+    return {
+      lat: parseFloat(place.lat),
+      lon: parseFloat(place.lon),
+      displayName: place.display_name,
+      street: addr.road || '',
+      houseNumber: addr.house_number || '',
+      city: addr.city || addr.town || addr.village || '',
+      postcode: addr.postcode || '',
+    };
+  } catch (err) {
+    console.warn('Fehler bei Geokodierung:', err.message);
+    return null;
+  }
+}
+
+// POST: Neue Anzeige erstellen
 router.post('/', auth, upload.single('image'), async (req, res) => {
-  const { title, description, price, category, zipCode } = req.body;
+  let { title, description, price, category, zipCode, location, street, houseNumber, city } = req.body;
   const image = req.file ? req.file.filename : null;
 
-  // PLZ → Stadtname über API auflösen
-  let location = 'Unbekannt';
-  try {
-    const response = await axios.get(`https://api.zippopotam.us/de/${zipCode}`);
-    location = response.data.places?.[0]['place name'] || 'Unbekannt';
-  } catch (err) {
-    console.warn('PLZ nicht gefunden oder API-Fehler:', zipCode);
+  const coords = await getCoordinates(street, houseNumber, zipCode, city || location);
+
+  if (coords) {
+    if (!street) street = coords.street;
+    if (!houseNumber) houseNumber = coords.houseNumber;
+    if (!city) city = coords.city;
+  }
+
+  let fullLocation = location || 'Unbekannt';
+  const addressParts = [];
+  if (street) addressParts.push(street);
+  if (houseNumber) addressParts.push(houseNumber);
+  if (coords && coords.postcode) addressParts.push(coords.postcode);
+  if (city) addressParts.push(city);
+
+  if (addressParts.length > 0) {
+    fullLocation = addressParts.join(', ');
   }
 
   try {
@@ -26,9 +79,14 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
       price,
       category,
       zipCode,
-      location,
+      location: fullLocation,
+      street,
+      houseNumber,
+      city,
+      latitude: coords ? coords.lat : null,
+      longitude: coords ? coords.lon : null,
       image,
-      userId: req.user.id.toString() // User-ID aus Token speichern (auth Middleware setzt req.user)
+      userId: req.user.id.toString(),
     });
 
     const savedAd = await newAd.save();
@@ -39,38 +97,64 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
   }
 });
 
-// PUT: Anzeige bearbeiten (nur vom Eigentümer)
+// PUT: Anzeige bearbeiten
 router.put('/:id', auth, upload.single('image'), async (req, res) => {
+
+  if (!req.params.id) {
+    return res.status(400).json({ error: 'Keine ID im Pfad übergeben' });
+  }
+
   try {
     const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ error: 'Anzeige nicht gefunden' });
 
-    // Prüfe Eigentümerschaft
     if (ad.userId.toString() !== req.user.id) {
       return res.status(403).json({ error: 'Nicht berechtigt' });
     }
 
-    const { title, description, price, category, zipCode } = req.body;
+    let { title, description, price, category, zipCode, location, street, houseNumber, city } = req.body;
 
-    // PLZ geändert? Ort neu ermitteln
-    let location = ad.location;
-    if (zipCode && zipCode !== ad.zipCode) {
-      try {
-        const response = await axios.get(`https://api.zippopotam.us/de/${zipCode}`);
-        location = response.data.places?.[0]['place name'] || 'Unbekannt';
-      } catch {
-        location = 'Unbekannt';
-      }
+    const coordsChanged =
+      zipCode !== ad.zipCode ||
+      street !== ad.street ||
+      houseNumber !== ad.houseNumber ||
+      city !== ad.city;
+
+    const coords = coordsChanged
+      ? await getCoordinates(street, houseNumber, zipCode, city || location)
+      : null;
+
+    if (coords) {
+      if (!street) street = coords.street;
+      if (!houseNumber) houseNumber = coords.houseNumber;
+      if (!city) city = coords.city;
     }
 
-    // Felder aktualisieren (nur wenn neue Werte vorhanden)
+    let fullLocation = location || ad.location;
+    const addressParts = [];
+    if (street) addressParts.push(street);
+    if (houseNumber) addressParts.push(houseNumber);
+    if (coords && coords.postcode) addressParts.push(coords.postcode);
+    if (city) addressParts.push(city);
+
+    if (addressParts.length > 0) {
+      fullLocation = addressParts.join(', ');
+    }
+
     ad.title = title || ad.title;
     ad.description = description || ad.description;
     ad.price = price || ad.price;
     ad.category = category || ad.category;
     ad.zipCode = zipCode || ad.zipCode;
-    ad.location = location;
+    ad.location = fullLocation;
+    ad.street = street || ad.street;
+    ad.houseNumber = houseNumber || ad.houseNumber;
+    ad.city = city || ad.city;
 
+    if (coords) {
+      ad.latitude = coords.lat;
+      ad.longitude = coords.lon;
+    }
     if (req.file) ad.image = req.file.filename;
 
     const updated = await ad.save();
@@ -87,7 +171,6 @@ router.delete('/:id', auth, async (req, res) => {
     const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ error: 'Anzeige nicht gefunden' });
 
-    // Prüfe, ob der angemeldete Nutzer Eigentümer ist
     if (ad.userId.toString() !== req.user.id) {
       return res.status(403).json({ error: 'Nicht berechtigt' });
     }

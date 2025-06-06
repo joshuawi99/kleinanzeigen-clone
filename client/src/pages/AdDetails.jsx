@@ -1,5 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Leaflet Icons Fix (wegen Webpack-Bundling)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+});
 
 function AdDetails() {
   const { id } = useParams();
@@ -22,10 +34,13 @@ function AdDetails() {
   if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
 
   const imageUrl = ad.image ? `http://localhost:5000/uploads/${ad.image}` : null;
+  const coords = ad.latitude && ad.longitude ? [ad.latitude, ad.longitude] : null;
 
   return (
     <div className="max-w-3xl mx-auto p-4">
-      <Link to="/" className="text-blue-600 underline mb-4 inline-block">← Zurück zur Übersicht</Link>
+      <Link to="/" className="text-blue-600 underline mb-4 inline-block">
+        ← Zurück zur Übersicht
+      </Link>
       {imageUrl && (
         <img
           src={imageUrl}
@@ -39,7 +54,30 @@ function AdDetails() {
       <p className="text-sm text-gray-500 mb-1">Kategorie: {ad.category}</p>
       <p className="text-sm text-gray-500 mb-1">Ort: {ad.location}</p>
       <p className="text-sm text-gray-500 mb-1">PLZ: {ad.zipCode}</p>
-      {/* Hier kannst du noch mehr Details ergänzen */}
+
+      {coords ? (
+        <MapContainer
+          center={coords}
+          zoom={13}
+          style={{ height: '300px', width: '100%', marginTop: '1rem' }}
+          scrollWheelZoom={false}
+        >
+          <TileLayer
+            attribution="&copy; OpenStreetMap-Mitwirkende"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <Marker position={coords}>
+            <Popup>
+              <strong>{ad.title}</strong><br />
+              {ad.street && `${ad.street} `}
+              {ad.houseNumber && `${ad.houseNumber}, `}
+              {ad.location}
+            </Popup>
+          </Marker>
+        </MapContainer>
+      ) : (
+        <p className="text-sm mt-4 text-gray-500">Keine Koordinaten verfügbar.</p>
+      )}
     </div>
   );
 }

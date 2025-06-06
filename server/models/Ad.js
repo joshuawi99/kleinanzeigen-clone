@@ -8,11 +8,15 @@ const adSchema = new mongoose.Schema({
   category: String,
   zipCode: String,
   location: String,
+  street: String,      // NEU
+  houseNumber: String, // NEU
+  latitude: Number,
+  longitude: Number,
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 
     required: true 
-  }, // <-- Wichtig
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Ad', adSchema);

@@ -4,6 +4,13 @@ import AdCard from '../components/AdCard';
 import TokenDebug from '../components/TokenDebug'; // 🧪
 import { AuthContext } from '../context/AuthContext';
 
+// Hilfsfunktion: Nur den Ort aus der kompletten Adresse extrahieren
+function extractCity(fullLocation) {
+  if (!fullLocation) return '';
+  const parts = fullLocation.split(',').map(p => p.trim());
+  return parts.length > 0 ? parts[parts.length - 1] : fullLocation;
+}
+
 function Home() {
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,14 +22,19 @@ function Home() {
   useEffect(() => {
     fetchAds()
       .then(data => setAds(data))
-      .catch(err => console.error(err))
+      .catch(err => console.error('Fehler beim Laden der Anzeigen:', err))
       .finally(() => setLoading(false));
   }, []);
 
+  // Erstelle eine Liste mit einzigartigen Städten aus den Anzeigen
+  const uniqueCities = Array.from(new Set(ads.map(ad => extractCity(ad.location))))
+    .filter(city => city);
+
+  // Filtere Anzeigen anhand Kategorie und Ort (nur Stadt)
   const filteredAds = ads
     .filter(ad =>
       (filterCategory ? ad.category === filterCategory : true) &&
-      (filterLocation ? ad.location === filterLocation : true)
+      (filterLocation ? extractCity(ad.location) === filterLocation : true)
     )
     .sort((a, b) => {
       if (sortOption === 'price-asc') return a.price - b.price;
@@ -61,11 +73,9 @@ function Home() {
           className="border p-2 rounded"
         >
           <option value="">Alle Orte</option>
-          {Array.from(new Set(ads.map(ad => ad.location)))
-            .filter(loc => loc)
-            .map(loc => (
-              <option key={loc} value={loc}>{loc}</option>
-            ))}
+          {uniqueCities.map(city => (
+            <option key={city} value={city}>{city}</option>
+          ))}
         </select>
 
         <select

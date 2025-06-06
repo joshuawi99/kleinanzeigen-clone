@@ -1,4 +1,5 @@
 import { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const categories = [
@@ -12,38 +13,58 @@ const categories = [
 ];
 
 function CreateAd() {
+  const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+
   const [form, setForm] = useState({
     title: '',
     description: '',
     price: '',
     category: '',
     zipCode: '',
+    location: '',
+    street: '',
+    houseNumber: '',
   });
   const [image, setImage] = useState(null);
   const [message, setMessage] = useState('');
-  const [locationPreview, setLocationPreview] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState([]);
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
   const handleChange = e => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
 
-    if (name === 'zipCode') {
-      fetchLocationFromZip(value);
+    if (name === 'zipCode' && value.length === 5) {
+      fetchLocationSuggestions(value);
     }
   };
 
-  const fetchLocationFromZip = async (zip) => {
-    if (zip.length !== 5) return setLocationPreview('');
+  const fetchLocationSuggestions = async (zip) => {
+    setLoadingLocation(true);
     try {
-      const res = await fetch(`https://api.zippopotam.us/de/${zip}`);
-      if (!res.ok) throw new Error('Ungültige PLZ');
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=Germany&format=json&addressdetails=1&limit=5`, {
+        headers: { 'User-Agent': 'Kleinanzeigen-App (deine-email@domain.de)' }
+      });
+      if (!res.ok) throw new Error('Fehler beim Laden der Orte');
       const data = await res.json();
-      const city = data.places?.[0]['place name'] || '';
-      setLocationPreview(city);
-    } catch (err) {
-      setLocationPreview('Unbekannt');
+
+      const suggestions = data.map(item => {
+        const addr = item.address || {};
+        return addr.city || addr.town || addr.village || item.display_name;
+      }).filter((v, i, a) => v && a.indexOf(v) === i);
+
+      setLocationSuggestions(suggestions);
+    } catch {
+      setLocationSuggestions([]);
+    } finally {
+      setLoadingLocation(false);
     }
+  };
+
+  const handleLocationSelect = (loc) => {
+    setForm(prev => ({ ...prev, location: loc }));
+    setLocationSuggestions([]);
   };
 
   const handleImageChange = e => {
@@ -71,9 +92,8 @@ function CreateAd() {
       const data = await res.json();
       if (res.ok) {
         setMessage('Anzeige erfolgreich erstellt!');
-        setForm({ title: '', description: '', price: '', category: '', zipCode: '' });
-        setLocationPreview('');
-        setImage(null);
+        // Optional: Nach Erstellen direkt zur Detailseite navigieren
+        navigate(`/ads/${data._id}`);
       } else {
         setMessage(data.error || 'Fehler beim Erstellen');
       }
@@ -123,21 +143,50 @@ function CreateAd() {
             <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
-        <div>
-          <input
-            name="zipCode"
-            value={form.zipCode}
-            onChange={handleChange}
-            placeholder="PLZ (z. B. 50667)"
-            className="border p-2 rounded w-full"
-            required
-          />
-          {locationPreview && (
-            <p className="text-sm text-gray-500 mt-1 ml-1">
-              ➡ Ort: <strong>{locationPreview}</strong>
-            </p>
-          )}
-        </div>
+        <input
+          name="zipCode"
+          value={form.zipCode}
+          onChange={handleChange}
+          placeholder="PLZ (z. B. 50667)"
+          className="border p-2 rounded"
+          required
+        />
+        {loadingLocation && <p className="text-sm text-gray-500">Orte werden geladen...</p>}
+        {locationSuggestions.length > 0 && (
+          <ul className="border p-2 rounded max-h-40 overflow-auto bg-white">
+            {locationSuggestions.map(loc => (
+              <li
+                key={loc}
+                className="cursor-pointer hover:bg-gray-100 p-1"
+                onClick={() => handleLocationSelect(loc)}
+              >
+                {loc}
+              </li>
+            ))}
+          </ul>
+        )}
+        <input
+          name="location"
+          value={form.location}
+          onChange={handleChange}
+          placeholder="Ort"
+          className="border p-2 rounded"
+          required
+        />
+        <input
+          name="street"
+          value={form.street}
+          onChange={handleChange}
+          placeholder="Straße (optional)"
+          className="border p-2 rounded"
+        />
+        <input
+          name="houseNumber"
+          value={form.houseNumber}
+          onChange={handleChange}
+          placeholder="Hausnummer (optional)"
+          className="border p-2 rounded"
+        />
         <input
           type="file"
           accept="image/*"
