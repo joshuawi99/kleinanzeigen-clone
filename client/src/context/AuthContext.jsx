@@ -18,6 +18,13 @@ function decodeJwt(token) {
   }
 }
 
+function isTokenExpired(token) {
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.exp) return true;
+  const now = Date.now() / 1000; // in Sekunden
+  return decoded.exp < now;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,30 +34,32 @@ export function AuthProvider({ children }) {
     const username = localStorage.getItem('username');
 
     if (token && username) {
-      const decoded = decodeJwt(token);
-
-      if (decoded) {
+      if (isTokenExpired(token)) {
+        // Token abgelaufen → ausloggen
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        setUser(null);
+      } else {
+        const decoded = decodeJwt(token);
         const id = decoded.userId || decoded.id || decoded._id || decoded.sub;
         setUser({ token, username, id });
-      } else {
-        setUser({ token, username });
       }
     }
     setLoading(false);
   }, []);
 
   const login = (token, username) => {
+    if (isTokenExpired(token)) {
+      // Falls beim Login schon abgelaufen, nicht speichern
+      setUser(null);
+      return;
+    }
     localStorage.setItem('token', token);
     localStorage.setItem('username', username);
 
     const decoded = decodeJwt(token);
-
-    if (decoded) {
-      const id = decoded.userId || decoded.id || decoded._id || decoded.sub;
-      setUser({ token, username, id });
-    } else {
-      setUser({ token, username });
-    }
+    const id = decoded.userId || decoded.id || decoded._id || decoded.sub;
+    setUser({ token, username, id });
   };
 
   const logout = () => {

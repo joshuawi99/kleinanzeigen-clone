@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState, useContext } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { AuthContext } from '../context/AuthContext';
 
 // Leaflet Icons Fix (wegen Webpack-Bundling)
 delete L.Icon.Default.prototype._getIconUrl;
@@ -15,6 +16,8 @@ L.Icon.Default.mergeOptions({
 
 function AdDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [ad, setAd] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -29,6 +32,31 @@ function AdDetails() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleStartChat = async () => {
+    if (!user) {
+      alert('Bitte zuerst einloggen, um Nachrichten zu senden.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ recipientId: ad.userId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        navigate('/chat'); // Optional: navigate(`/chat/${data._id}`) falls Chat-ID existiert und du direkt dahin willst
+      } else {
+        alert(data.error || 'Fehler beim Erstellen des Chats');
+      }
+    } catch {
+      alert('Serverfehler beim Erstellen des Chats');
+    }
+  };
 
   if (loading) return <p className="text-center mt-10">Lade Anzeige...</p>;
   if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
@@ -54,6 +82,13 @@ function AdDetails() {
       <p className="text-sm text-gray-500 mb-1">Kategorie: {ad.category}</p>
       <p className="text-sm text-gray-500 mb-1">Ort: {ad.location}</p>
       <p className="text-sm text-gray-500 mb-1">PLZ: {ad.zipCode}</p>
+
+      <button
+        onClick={handleStartChat}
+        className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
+      >
+        Nachricht schreiben
+      </button>
 
       {coords ? (
         <MapContainer
