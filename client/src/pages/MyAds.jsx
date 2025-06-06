@@ -29,7 +29,7 @@ function MyAds() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {ads.map(ad => (
-            <AdCard key={ad._id} ad={ad} />
+            <AdCard key={ad._id} ad={ad} user={user} />
           ))}
         </div>
       )}

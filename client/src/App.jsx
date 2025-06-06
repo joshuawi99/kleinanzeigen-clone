@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import CreateAd from './pages/CreateAd';
 import MyAds from './pages/MyAds'; // ✅ NEU
+import EditAd from './pages/EditAd'; // 👈 NEU: EditAd importieren
 import Header from './components/Header';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -32,6 +33,16 @@ function App() {
           element={
             <PrivateRoute>
               <MyAds />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Geschützte Route: Anzeige bearbeiten */}
+        <Route
+          path="/ads/edit/:id"
+          element={
+            <PrivateRoute>
+              <EditAd />
             </PrivateRoute>
           }
         />

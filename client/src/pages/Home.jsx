@@ -42,9 +42,11 @@ function Home() {
           className="border p-2 rounded"
         >
           <option value="">Alle Kategorien</option>
-          {Array.from(new Set(ads.map(ad => ad.category))).map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
+          {Array.from(new Set(ads.map(ad => ad.category)))
+            .filter(cat => cat) // Entfernt falsy Werte
+            .map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
         </select>
 
         <select
@@ -53,9 +55,11 @@ function Home() {
           className="border p-2 rounded"
         >
           <option value="">Alle Orte</option>
-          {Array.from(new Set(ads.map(ad => ad.location))).map(loc => (
-            <option key={loc} value={loc}>{loc}</option>
-          ))}
+          {Array.from(new Set(ads.map(ad => ad.location)))
+            .filter(loc => loc) // Entfernt falsy Werte
+            .map(loc => (
+              <option key={loc} value={loc}>{loc}</option>
+            ))}
         </select>
 
         <select

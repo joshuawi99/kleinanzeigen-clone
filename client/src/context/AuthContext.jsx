@@ -2,23 +2,55 @@ import { createContext, useState, useEffect } from 'react';
 
 export const AuthContext = createContext();
 
+function decodeJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // ⏳ NEU
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
+
     if (token && username) {
-      setUser({ token, username });
+      const decoded = decodeJwt(token);
+
+      if (decoded) {
+        const id = decoded.userId || decoded.id || decoded._id || decoded.sub;
+        setUser({ token, username, id });
+      } else {
+        setUser({ token, username });
+      }
     }
-    setLoading(false); // ✅ Ladezustand beenden
+    setLoading(false);
   }, []);
 
   const login = (token, username) => {
     localStorage.setItem('token', token);
     localStorage.setItem('username', username);
-    setUser({ token, username });
+
+    const decoded = decodeJwt(token);
+
+    if (decoded) {
+      const id = decoded.userId || decoded.id || decoded._id || decoded.sub;
+      setUser({ token, username, id });
+    } else {
+      setUser({ token, username });
+    }
   };
 
   const logout = () => {
@@ -27,7 +59,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  if (loading) return <p className="text-center mt-10">🔄 Lade Benutzerstatus...</p>; // 🕓 Optional
+  if (loading) return <p className="text-center mt-10">Lade Benutzerstatus...</p>;
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
