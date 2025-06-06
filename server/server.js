@@ -12,6 +12,13 @@ app.use(express.json());
 const adRoutes = require('./routes/adRoutes');
 app.use('/api/ads', adRoutes);
 
+const userRoutes = require('./routes/userRoutes');
+app.use('/api/users', userRoutes);
+
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
