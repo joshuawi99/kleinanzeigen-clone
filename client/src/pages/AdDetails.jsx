@@ -5,11 +5,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AuthContext } from '../context/AuthContext';
 
-// Leaflet Icons Fix (wegen Webpack-Bundling)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
 });
@@ -38,6 +36,7 @@ function AdDetails() {
       alert('Bitte zuerst einloggen, um Nachrichten zu senden.');
       return;
     }
+
     try {
       const res = await fetch('http://localhost:5000/api/chats', {
         method: 'POST',
@@ -49,7 +48,7 @@ function AdDetails() {
       });
       const data = await res.json();
       if (res.ok) {
-        navigate('/chat'); // Optional: navigate(`/chat/${data._id}`) falls Chat-ID existiert und du direkt dahin willst
+        navigate('/chat', { state: { chatId: data._id } });
       } else {
         alert(data.error || 'Fehler beim Erstellen des Chats');
       }
@@ -83,12 +82,14 @@ function AdDetails() {
       <p className="text-sm text-gray-500 mb-1">Ort: {ad.location}</p>
       <p className="text-sm text-gray-500 mb-1">PLZ: {ad.zipCode}</p>
 
-      <button
-        onClick={handleStartChat}
-        className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
-      >
-        Nachricht schreiben
-      </button>
+      {user?.id !== ad.userId && (
+        <button
+          onClick={handleStartChat}
+          className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
+        >
+          Nachricht schreiben
+        </button>
+      )}
 
       {coords ? (
         <MapContainer

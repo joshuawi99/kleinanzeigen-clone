@@ -7,36 +7,57 @@ const ChatContext = createContext();
 export function ChatProvider({ children }) {
   const { user } = useContext(AuthContext);
   const [socket, setSocket] = useState(null);
-  const [chats, setChats] = useState([]); // Liste aller Chats
+  const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
-  const [messages, setMessages] = useState([]); // Aktuelle Chatnachrichten
+  const [messages, setMessages] = useState([]);
+  const socketRef = useRef(null);
 
-  const socketRef = useRef();
-
+  // Verbindung mit Socket.IO herstellen
   useEffect(() => {
     if (user?.token) {
-      // Socket mit Server verbinden
       const newSocket = io('http://localhost:5000', {
-        auth: { token: user.token }
+        auth: { token: user.token },
       });
 
       socketRef.current = newSocket;
       setSocket(newSocket);
 
-      // Verbindung beendet
-      return () => newSocket.disconnect();
+      // Sauber disconnecten
+      return () => {
+        newSocket.disconnect();
+        socketRef.current = null;
+        setSocket(null);
+        setMessages([]);
+        setCurrentChatId(null);
+      };
     }
   }, [user]);
 
-  // Chat betreten
+  // Neue Nachrichten empfangen
+  useEffect(() => {
+    const s = socketRef.current;
+    if (!s) return;
+
+    const handleReceive = (message) => {
+      setMessages(prev => [...prev, message]);
+    };
+
+    s.on('receiveMessage', handleReceive);
+
+    return () => {
+      s.off('receiveMessage', handleReceive);
+    };
+  }, [socketRef.current]);
+
+  // Funktionen zum Chatmanagement
   const joinChat = (chatId) => {
     if (socketRef.current && chatId) {
       socketRef.current.emit('joinChat', chatId);
       setCurrentChatId(chatId);
+      setMessages([]); // Optional: Nachrichten neu laden
     }
   };
 
-  // Chat verlassen
   const leaveChat = (chatId) => {
     if (socketRef.current && chatId) {
       socketRef.current.emit('leaveChat', chatId);
@@ -45,24 +66,11 @@ export function ChatProvider({ children }) {
     }
   };
 
-  // Nachricht senden
   const sendMessage = (chatId, senderId, text) => {
-    if (socketRef.current) {
+    if (socketRef.current && text.trim()) {
       socketRef.current.emit('sendMessage', { chatId, senderId, text });
     }
   };
-
-  useEffect(() => {
-    if (!socketRef.current) return;
-
-    socketRef.current.on('receiveMessage', (message) => {
-      setMessages(prev => [...prev, message]);
-    });
-
-    return () => {
-      socketRef.current.off('receiveMessage');
-    };
-  }, [socketRef.current]);
 
   return (
     <ChatContext.Provider

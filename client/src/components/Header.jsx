@@ -1,38 +1,30 @@
+import { Link } from 'react-router-dom';
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
 
 function Header() {
   const { user, logout } = useContext(AuthContext);
 
   return (
-    <div className="bg-gray-800 text-white p-4 flex justify-between">
-      <Link to="/" className="font-bold">Kleinanzeigen</Link>
-      <div className="flex gap-4 items-center">
+    <header className="bg-blue-600 text-white px-4 py-3 flex justify-between items-center">
+      <Link to="/" className="font-bold text-lg">Kleinanzeigen</Link>
+      <nav className="flex gap-4 items-center">
         {user ? (
           <>
-            <span>Hi, {user.username}</span>
-            <Link to="/mein-profil" className="hover:underline">
-              Mein Profil
-            </Link>
-            <Link to="/meine-anzeigen" className="hover:underline">
-              Meine Anzeigen
-            </Link>
-            <button
-              onClick={logout}
-              className="text-red-300 hover:text-red-500 ml-4"
-            >
-              Logout
-            </button>
+            <Link to="/create">Neue Anzeige</Link>
+            <Link to="/meine-anzeigen">Meine Anzeigen</Link>
+            <Link to="/mein-profil">Mein Profil</Link>
+            <Link to="/chat">Meine Chats</Link> {/* 👈 NEU */}
+            <button onClick={logout} className="bg-white text-blue-600 px-3 py-1 rounded">Logout</button>
           </>
         ) : (
           <>
-            <Link to="/login" className="hover:underline">Login</Link>
-            <Link to="/register" className="hover:underline">Registrieren</Link>
+            <Link to="/login">Login</Link>
+            <Link to="/register">Registrieren</Link>
           </>
         )}
-      </div>
-    </div>
+      </nav>
+    </header>
   );
 }
 

@@ -1,62 +1,91 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { useChat } from '../context/ChatContext';
-import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 export default function ChatRoom({ chatId }) {
   const { user } = useContext(AuthContext);
-  const { messages, setMessages, sendMessage } = useChat();
-
-  const [input, setInput] = useState('');
+  const { socket, currentChatId } = useChat();
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState('');
   const messagesEndRef = useRef(null);
 
+  // Bestehende Nachrichten laden
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId || !user) return;
 
     fetch(`http://localhost:5000/api/chats/${chatId}`, {
       headers: { Authorization: `Bearer ${user.token}` }
     })
       .then(res => res.json())
-      .then(data => setMessages(data.messages))
+      .then(data => setMessages(data.messages || []))
       .catch(console.error);
-  }, [chatId, user, setMessages]);
+  }, [chatId, user]);
+
+  // Auf neue Nachrichten hören
+  useEffect(() => {
+    if (!socket || !chatId) return;
+
+    const handleMessage = (message) => {
+      setMessages(prev => [...prev, message]);
+    };
+
+    socket.on('receiveMessage', handleMessage);
+    return () => socket.off('receiveMessage', handleMessage);
+  }, [socket, chatId]);
+
+  const handleSend = () => {
+    if (!text.trim()) return;
+    socket.emit('sendMessage', {
+      chatId,
+      senderId: user.id,
+      text
+    });
+    setText('');
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = () => {
-    if (input.trim() === '') return;
-    sendMessage(chatId, user.id, input.trim());
-    setInput('');
-  };
-
   return (
-    <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', height: '80vh' }}>
+    <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem' }}>
-        {messages.map((msg, i) => (
+        {messages.map((msg, index) => (
           <div
-            key={i}
+            key={index}
             style={{
-              textAlign: msg.senderId === user.id ? 'right' : 'left',
+              textAlign: msg.sender === user.id ? 'right' : 'left',
               marginBottom: '0.5rem',
             }}
           >
-            <strong>{msg.senderId === user.id ? 'Ich' : msg.sender?.username || 'User'}</strong>: {msg.text}
+            <span
+              style={{
+                display: 'inline-block',
+                background: msg.sender === user.id ? '#d1e7ff' : '#eee',
+                padding: '0.5rem 1rem',
+                borderRadius: '1rem',
+              }}
+            >
+              {msg.text}
+            </span>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
         <input
-          type="text"
-          placeholder="Nachricht schreiben..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
+          value={text}
+          onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
-          style={{ width: '80%', padding: '0.5rem' }}
+          placeholder="Nachricht eingeben..."
+          className="border rounded p-2 flex-1"
         />
-        <button onClick={handleSend} style={{ padding: '0.5rem 1rem' }}>Senden</button>
+        <button
+          onClick={handleSend}
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Senden
+        </button>
       </div>
     </div>
   );
