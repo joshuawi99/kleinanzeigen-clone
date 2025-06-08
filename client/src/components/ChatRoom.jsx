@@ -4,48 +4,26 @@ import { AuthContext } from '../context/AuthContext';
 
 export default function ChatRoom({ chatId }) {
   const { user } = useContext(AuthContext);
-  const { socket, currentChatId } = useChat();
-  const [messages, setMessages] = useState([]);
+  const { currentChatId, messages, sendMessage } = useChat();
+
   const [text, setText] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Bestehende Nachrichten laden
-  useEffect(() => {
-    if (!chatId || !user) return;
-
-    fetch(`http://localhost:5000/api/chats/${chatId}`, {
-      headers: { Authorization: `Bearer ${user.token}` }
-    })
-      .then(res => res.json())
-      .then(data => setMessages(data.messages || []))
-      .catch(console.error);
-  }, [chatId, user]);
-
-  // Auf neue Nachrichten hören
-  useEffect(() => {
-    if (!socket || !chatId) return;
-
-    const handleMessage = (message) => {
-      setMessages(prev => [...prev, message]);
-    };
-
-    socket.on('receiveMessage', handleMessage);
-    return () => socket.off('receiveMessage', handleMessage);
-  }, [socket, chatId]);
-
   const handleSend = () => {
     if (!text.trim()) return;
-    socket.emit('sendMessage', {
-      chatId,
-      senderId: user.id,
-      text
-    });
+    sendMessage(currentChatId, user.id, text);
     setText('');
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  if (!currentChatId) return (
+    <div className="flex-1 p-4 flex items-center justify-center text-gray-500">
+      Bitte wähle einen Chat aus.
+    </div>
+  );
 
   return (
     <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column' }}>
@@ -54,14 +32,14 @@ export default function ChatRoom({ chatId }) {
           <div
             key={index}
             style={{
-              textAlign: msg.sender === user.id ? 'right' : 'left',
+              textAlign: msg.senderId === user.id ? 'right' : 'left',
               marginBottom: '0.5rem',
             }}
           >
             <span
               style={{
                 display: 'inline-block',
-                background: msg.sender === user.id ? '#d1e7ff' : '#eee',
+                background: msg.senderId === user.id ? '#d1e7ff' : '#eee',
                 padding: '0.5rem 1rem',
                 borderRadius: '1rem',
               }}

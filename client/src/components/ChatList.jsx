@@ -28,26 +28,21 @@ export default function ChatList({ onSelectChat }) {
     <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '1rem' }}>
       <h2>Chats</h2>
       {chats.length === 0 && <p>Keine Chats vorhanden</p>}
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      <ul>
         {chats.map(chat => (
           <li
             key={chat._id}
             style={{
               cursor: 'pointer',
               fontWeight: chat._id === currentChatId ? 'bold' : 'normal',
-              background: chat._id === currentChatId ? '#f0f0f0' : 'transparent',
-              padding: '0.5rem',
-              borderRadius: '4px',
               marginBottom: '0.5rem'
             }}
             onClick={() => handleSelect(chat._id)}
           >
-            {Array.isArray(chat.participants)
-              ? chat.participants
-                  .filter(p => p._id !== user.id)
-                  .map(p => p.username)
-                  .join(', ')
-              : 'Unbekannt'}
+            {chat.participants
+              .filter(p => p._id !== user.id)
+              .map(p => p.username)
+              .join(', ')}
           </li>
         ))}
       </ul>

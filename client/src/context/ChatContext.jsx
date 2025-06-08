@@ -12,7 +12,7 @@ export function ChatProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const socketRef = useRef(null);
 
-  // Verbindung mit Socket.IO herstellen
+  // 🔌 Verbindung mit Socket.IO herstellen
   useEffect(() => {
     if (user?.token) {
       const newSocket = io('http://localhost:5000', {
@@ -22,7 +22,6 @@ export function ChatProvider({ children }) {
       socketRef.current = newSocket;
       setSocket(newSocket);
 
-      // Sauber disconnecten
       return () => {
         newSocket.disconnect();
         socketRef.current = null;
@@ -33,7 +32,7 @@ export function ChatProvider({ children }) {
     }
   }, [user]);
 
-  // Neue Nachrichten empfangen
+  // 📩 Nachrichten empfangen
   useEffect(() => {
     const s = socketRef.current;
     if (!s) return;
@@ -43,18 +42,31 @@ export function ChatProvider({ children }) {
     };
 
     s.on('receiveMessage', handleReceive);
-
     return () => {
       s.off('receiveMessage', handleReceive);
     };
   }, [socketRef.current]);
 
-  // Funktionen zum Chatmanagement
-  const joinChat = (chatId) => {
-    if (socketRef.current && chatId) {
-      socketRef.current.emit('joinChat', chatId);
-      setCurrentChatId(chatId);
-      setMessages([]); // Optional: Nachrichten neu laden
+  // 💬 Chat betreten & Verlauf laden
+  const joinChat = async (chatId) => {
+    if (!socketRef.current || !chatId || !user) return;
+
+    socketRef.current.emit('joinChat', chatId);
+    setCurrentChatId(chatId);
+    setMessages([]);
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/chats/${chatId}`, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessages(data.messages || []);
+      } else {
+        console.error('Fehler beim Laden des Chatverlaufs:', data.error);
+      }
+    } catch (err) {
+      console.error('Fehler beim Laden der Nachrichten:', err);
     }
   };
 
@@ -66,6 +78,7 @@ export function ChatProvider({ children }) {
     }
   };
 
+  // ✉️ Nachricht senden (nicht doppelt speichern!)
   const sendMessage = (chatId, senderId, text) => {
     if (socketRef.current && text.trim()) {
       socketRef.current.emit('sendMessage', { chatId, senderId, text });
