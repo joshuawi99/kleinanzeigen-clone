@@ -10,9 +10,10 @@ export function ChatProvider({ children }) {
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [unreadChats, setUnreadChats] = useState({});
   const socketRef = useRef(null);
 
-  // 🔌 Verbindung mit Socket.IO herstellen
+  // Verbindung mit Socket.IO
   useEffect(() => {
     if (user?.token) {
       const newSocket = io('http://localhost:5000', {
@@ -32,22 +33,44 @@ export function ChatProvider({ children }) {
     }
   }, [user]);
 
-  // 📩 Nachrichten empfangen
+  // Socket-Events
   useEffect(() => {
     const s = socketRef.current;
     if (!s) return;
 
     const handleReceive = (message) => {
-      setMessages(prev => [...prev, message]);
+      if (message.chatId === currentChatId) {
+        setMessages(prev => [...prev, message]);
+      } else {
+        setUnreadChats(prev => ({
+          ...prev,
+          [message.chatId]: true
+        }));
+      }
+    };
+
+    const handleNewMessage = (message) => {
+      if (
+        message.to === user.id &&
+        message.chatId !== currentChatId
+      ) {
+        setUnreadChats(prev => ({
+          ...prev,
+          [message.chatId]: true
+        }));
+      }
     };
 
     s.on('receiveMessage', handleReceive);
+    s.on('newMessage', handleNewMessage);
+
     return () => {
       s.off('receiveMessage', handleReceive);
+      s.off('newMessage', handleNewMessage);
     };
-  }, [socketRef.current]);
+  }, [socketRef.current, currentChatId, user]);
 
-  // 💬 Chat betreten & Verlauf laden
+  // Chat betreten & Verlauf laden
   const joinChat = async (chatId) => {
     if (!socketRef.current || !chatId || !user) return;
 
@@ -62,6 +85,11 @@ export function ChatProvider({ children }) {
       const data = await res.json();
       if (res.ok) {
         setMessages(data.messages || []);
+        setUnreadChats(prev => {
+          const updated = { ...prev };
+          delete updated[chatId]; // ✅ Als gelesen markieren
+          return updated;
+        });
       } else {
         console.error('Fehler beim Laden des Chatverlaufs:', data.error);
       }
@@ -78,7 +106,7 @@ export function ChatProvider({ children }) {
     }
   };
 
-  // ✉️ Nachricht senden (nicht doppelt speichern!)
+  // Nachricht senden
   const sendMessage = (chatId, senderId, text) => {
     if (socketRef.current && text.trim()) {
       socketRef.current.emit('sendMessage', { chatId, senderId, text });
@@ -97,7 +125,9 @@ export function ChatProvider({ children }) {
         setMessages,
         joinChat,
         leaveChat,
-        sendMessage
+        sendMessage,
+        unreadChats,
+        setUnreadChats
       }}
     >
       {children}

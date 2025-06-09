@@ -51,11 +51,25 @@ io.on('connection', (socket) => {
       chat.messages.push(message);
       await chat.save();
 
-      // Direkt an die Teilnehmer im Raum senden
+      // Nachricht an alle im Raum senden
       io.to(chatId).emit('receiveMessage', {
+        chatId,
         senderId,
         text,
         createdAt: message.createdAt
+      });
+
+      // 🔔 Andere Teilnehmer benachrichtigen (außer Sender)
+      chat.participants.forEach(participantId => {
+        if (participantId.toString() !== senderId) {
+          io.emit('newMessage', {
+            chatId,
+            senderId,
+            text,
+            createdAt: message.createdAt,
+            to: participantId.toString()
+          });
+        }
       });
 
       console.log(`📨 Nachricht gesendet in Chat ${chatId}`);
