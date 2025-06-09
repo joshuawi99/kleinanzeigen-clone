@@ -61,12 +61,27 @@ export function ChatProvider({ children }) {
       }
     };
 
+    const handleChatCreated = (newChat) => {
+      setChats(prev => {
+        const exists = prev.some(c => c._id === newChat._id);
+        return exists ? prev : [newChat, ...prev];
+      });
+    };
+
+    const handleChatDeleted = (chatId) => {
+      setChats(prev => prev.filter(c => c._id !== chatId));
+    };
+
     s.on('receiveMessage', handleReceive);
     s.on('newMessage', handleNewMessage);
+    s.on('chatCreated', handleChatCreated);
+    s.on('chatDeleted', handleChatDeleted);
 
     return () => {
       s.off('receiveMessage', handleReceive);
       s.off('newMessage', handleNewMessage);
+      s.off('chatCreated', handleChatCreated);
+      s.off('chatDeleted', handleChatDeleted);
     };
   }, [socketRef.current, currentChatId, user]);
 
@@ -113,6 +128,9 @@ export function ChatProvider({ children }) {
     }
   };
 
+  // 🔴 Neue Hilfsvariable für Header
+  const hasUnreadMessages = Object.keys(unreadChats).length > 0;
+
   return (
     <ChatContext.Provider
       value={{
@@ -127,7 +145,8 @@ export function ChatProvider({ children }) {
         leaveChat,
         sendMessage,
         unreadChats,
-        setUnreadChats
+        setUnreadChats,
+        hasUnreadMessages
       }}
     >
       {children}

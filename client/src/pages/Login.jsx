@@ -18,7 +18,7 @@ function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        login(data.token, data.username); // 👈 NEU
+        login(data.token, data.firstName, data.lastName);
         setMessage('Login erfolgreich!');
       } else {
         setMessage(data.error || 'Fehler beim Login');

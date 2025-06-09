@@ -1,72 +1,56 @@
-import { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
 
-function AdCard({ ad, onDelete }) {
-  const { user } = useContext(AuthContext);
-  const imageUrl = ad.image
-    ? `http://localhost:5000/uploads/${ad.image}`
-    : null;
-
-  const isOwner = user?.id && ad.userId && String(user.id) === String(ad.userId);
-
-  const handleDelete = async () => {
-    if (!window.confirm('Möchtest du diese Anzeige wirklich löschen?')) return;
-    try {
-      const res = await fetch(`http://localhost:5000/api/ads/${ad._id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      });
-      if (res.ok) {
-        if (onDelete) {
-          onDelete(ad._id);
-        }
-      } else {
-        alert('Fehler beim Löschen der Anzeige');
-      }
-    } catch {
-      alert('Serverfehler beim Löschen');
-    }
-  };
+export default function AdCard({ ad, onDelete }) {
+  const hasMultipleImages = Array.isArray(ad.images) && ad.images.length > 0;
+  const imageUrl = hasMultipleImages
+    ? `http://localhost:5000/uploads/${ad.images[0]}`
+    : ad.image
+      ? `http://localhost:5000/uploads/${ad.image}`
+      : null;
 
   return (
-    <div className="border rounded-lg shadow p-4 bg-white">
-      {imageUrl && (
-        <img
-          src={imageUrl}
-          alt={ad.title}
-          className="w-full h-48 object-cover rounded mb-3"
-        />
-      )}
-      <h2 className="text-xl font-semibold">
-        <Link to={`/ads/${ad._id}`} className="hover:underline">
-          {ad.title}
-        </Link>
-      </h2>
-      <p className="text-gray-600 mb-2">{ad.description}</p>
-      <p className="text-green-700 font-bold">{ad.price} €</p>
-      <p className="text-sm text-gray-500">📍 {ad.location || 'Unbekannt'}</p>
+    <div className="bg-white border rounded shadow-md overflow-hidden flex flex-col transition hover:shadow-lg">
+      <Link to={`/ads/${ad._id}`}>
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={ad.title}
+            className="w-full h-48 object-cover"
+          />
+        ) : (
+          <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
+            Kein Bild vorhanden
+          </div>
+        )}
+      </Link>
 
-      {isOwner && (
-        <>
+      <div className="p-4 flex-1 flex flex-col justify-between">
+        <div>
+          <Link to={`/ads/${ad._id}`}>
+            <h3 className="text-lg font-bold mb-1 hover:underline">{ad.title}</h3>
+          </Link>
+          <p className="text-gray-600 text-sm mb-2 truncate">{ad.description}</p>
+          <p className="text-green-600 font-semibold text-lg mb-2">{ad.price} €</p>
+          <p className="text-sm text-gray-500">
+            📍 {ad.street || '–'}, {ad.zipCode || ''} {ad.location || ''}
+          </p>
+        </div>
+
+        <div className="flex gap-2 mt-4">
           <Link
             to={`/ads/edit/${ad._id}`}
-            className="mt-3 inline-block bg-blue-600 text-white px-4 py-2 rounded mr-2"
+            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
           >
             Bearbeiten
           </Link>
           <button
-            onClick={handleDelete}
-            className="mt-3 inline-block bg-red-600 text-white px-4 py-2 rounded"
+            onClick={() => onDelete(ad._id)}
+            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
           >
             Löschen
           </button>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
-
-export default AdCard;

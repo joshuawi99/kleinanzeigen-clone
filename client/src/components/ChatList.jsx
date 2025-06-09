@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useContext } from 'react';
 import { useChat } from '../context/ChatContext';
-import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 export default function ChatList({ onSelectChat }) {
@@ -21,8 +20,18 @@ export default function ChatList({ onSelectChat }) {
       headers: { Authorization: `Bearer ${user.token}` }
     })
       .then(res => res.json())
-      .then(data => setChats(data))
-      .catch(console.error);
+      .then(data => {
+        if (Array.isArray(data)) {
+          setChats(data);
+        } else {
+          console.warn('Chats ist kein Array:', data);
+          setChats([]);
+        }
+      })
+      .catch(err => {
+        console.error('Fehler beim Laden der Chats:', err);
+        setChats([]);
+      });
   }, [user, setChats]);
 
   const handleSelect = (chatId) => {
@@ -31,46 +40,78 @@ export default function ChatList({ onSelectChat }) {
     onSelectChat(chatId);
   };
 
+  const handleDelete = (chatId) => {
+    if (!window.confirm('Diesen Chat wirklich löschen?')) return;
+
+    fetch(`http://localhost:5000/api/chats/${chatId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+      },
+    })
+      .then(res => res.json())
+      .then(() => {
+        setChats(prev => prev.filter(c => c._id !== chatId));
+      })
+      .catch(err => {
+        console.error('Fehler beim Löschen des Chats:', err);
+      });
+  };
+
+  if (!Array.isArray(chats)) {
+    return <p className="text-center text-red-500">Fehler beim Laden der Chats.</p>;
+  }
+
   return (
-    <div style={{ width: '300px', borderRight: '1px solid #ccc', padding: '1rem' }}>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Chats</h2>
+    <div className="w-[300px] border-r border-gray-200 p-4">
+      <h2 className="text-xl font-bold mb-4">Chats</h2>
 
       {chats.length === 0 && <p>Keine Chats vorhanden</p>}
 
-      <ul>
+      <ul className="space-y-1">
         {chats.map(chat => {
           const isActive = chat._id === currentChatId;
           const isUnread = unreadChats[chat._id];
 
           const partnerNames = chat.participants
             .filter(p => p._id !== user.id)
-            .map(p => p.username)
+            .map(p => `${p.firstName} ${p.lastName}`)
             .join(', ');
 
           return (
             <li
               key={chat._id}
-              style={{
-                cursor: 'pointer',
-                fontWeight: isUnread || isActive ? 'bold' : 'normal',
-                backgroundColor: isActive ? '#eef6ff' : 'transparent',
-                padding: '0.5rem',
-                borderRadius: '0.25rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '0.25rem'
-              }}
-              onClick={() => handleSelect(chat._id)}
+              className={`
+                cursor-pointer px-3 py-2 rounded-md flex justify-between items-center
+                transition
+                ${isActive ? 'bg-blue-100 font-semibold' : 'hover:bg-gray-100'}
+              `}
             >
-              <span>{partnerNames}</span>
+              <span
+                onClick={() => handleSelect(chat._id)}
+                className="flex-1 truncate"
+              >
+                {partnerNames}
+              </span>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(chat._id);
+                }}
+                title="Chat löschen"
+                className="text-red-500 hover:text-red-700 ml-2 text-sm"
+              >
+                ✖
+              </button>
+
               {isUnread && (
                 <span
                   aria-label="Ungelesene Nachricht"
                   title="Neue Nachricht"
-                  style={{ color: 'blue', fontSize: '1.2rem' }}
+                  className="text-blue-600 text-sm ml-2"
                 >
-                  🔵
+                  ●
                 </span>
               )}
             </li>

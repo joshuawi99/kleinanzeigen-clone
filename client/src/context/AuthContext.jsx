@@ -21,7 +21,7 @@ function decodeJwt(token) {
 function isTokenExpired(token) {
   const decoded = decodeJwt(token);
   if (!decoded || !decoded.exp) return true;
-  const now = Date.now() / 1000; // in Sekunden
+  const now = Date.now() / 1000;
   return decoded.exp < now;
 }
 
@@ -31,44 +31,47 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const username = localStorage.getItem('username');
+    const firstName = localStorage.getItem('firstName');
+    const lastName = localStorage.getItem('lastName');
 
-    if (token && username) {
+    if (token && firstName && lastName) {
       if (isTokenExpired(token)) {
-        // Token abgelaufen → ausloggen
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
+        localStorage.clear();
         setUser(null);
       } else {
         const decoded = decodeJwt(token);
         const id = decoded.userId || decoded.id || decoded._id || decoded.sub;
-        setUser({ token, username, id });
+        setUser({ token, firstName, lastName, id });
       }
     }
     setLoading(false);
   }, []);
 
-  const login = (token, username) => {
+  // Login-Aufruf z. B. nach erfolgreichem Login-Request
+  const login = (token, firstName, lastName) => {
     if (isTokenExpired(token)) {
-      // Falls beim Login schon abgelaufen, nicht speichern
       setUser(null);
       return;
     }
+
     localStorage.setItem('token', token);
-    localStorage.setItem('username', username);
+    localStorage.setItem('firstName', firstName);
+    localStorage.setItem('lastName', lastName);
 
     const decoded = decodeJwt(token);
     const id = decoded.userId || decoded.id || decoded._id || decoded.sub;
-    setUser({ token, username, id });
+
+    setUser({ token, firstName, lastName, id });
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
+    localStorage.clear();
     setUser(null);
   };
 
-  if (loading) return <p className="text-center mt-10">Lade Benutzerstatus...</p>;
+  if (loading) {
+    return <p className="text-center mt-10">Lade Benutzerstatus...</p>;
+  }
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>

@@ -17,6 +17,7 @@ function AdDetails() {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [ad, setAd] = useState(null);
+  const [sellerRating, setSellerRating] = useState(null); // ⭐ NEU
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -26,7 +27,22 @@ function AdDetails() {
         if (!res.ok) throw new Error('Anzeige nicht gefunden');
         return res.json();
       })
-      .then(data => setAd(data))
+      .then(data => {
+        setAd(data);
+
+        // Verkäufer-Bewertung laden
+        fetch(`http://localhost:5000/api/users/${data.userId}`)
+          .then(res => res.json())
+          .then(ratingData => {
+            if (ratingData.averageRating) {
+              setSellerRating({
+                average: ratingData.averageRating,
+                total: ratingData.totalRatings
+              });
+            }
+          })
+          .catch(err => console.error('Fehler beim Laden der Verkäuferbewertung:', err));
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
@@ -76,6 +92,16 @@ function AdDetails() {
         />
       )}
       <h1 className="text-3xl font-bold mb-2">{ad.title}</h1>
+
+      {/* Verkäuferbewertung anzeigen */}
+      {sellerRating ? (
+        <p className="text-yellow-600 mb-2">
+          Verkäuferbewertung: ⭐ {sellerRating.average} ({sellerRating.total} Bewertung{sellerRating.total === 1 ? '' : 'en'})
+        </p>
+      ) : (
+        <p className="text-gray-500 mb-2">Noch keine Bewertung für diesen Verkäufer</p>
+      )}
+
       <p className="text-gray-600 mb-4">{ad.description}</p>
       <p className="text-xl font-semibold mb-2">{ad.price} €</p>
       <p className="text-sm text-gray-500 mb-1">Kategorie: {ad.category}</p>

@@ -2,18 +2,21 @@ import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
 function MyProfile() {
-  const { user, logout } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [form, setForm] = useState({
-    username: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     passwordConfirm: '',
   });
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [averageRatingInfo, setAverageRatingInfo] = useState(null);
 
   useEffect(() => {
     if (!user) return;
+
     fetch('http://localhost:5000/api/users/me', {
       headers: {
         Authorization: `Bearer ${user.token}`,
@@ -24,7 +27,22 @@ function MyProfile() {
         return res.json();
       })
       .then(data => {
-        setForm({ username: data.username || '', email: data.email || '', password: '', passwordConfirm: '' });
+        setForm({
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          email: data.email || '',
+          password: '',
+          passwordConfirm: ''
+        });
+
+        if (Array.isArray(data.ratings)) {
+          const total = data.ratings.length;
+          const average =
+            total > 0
+              ? (data.ratings.reduce((sum, r) => sum + r.rating, 0) / total).toFixed(1)
+              : null;
+          setAverageRatingInfo({ average, total });
+        }
       })
       .catch(err => setMessage(err.message))
       .finally(() => setLoading(false));
@@ -41,8 +59,10 @@ function MyProfile() {
       setMessage('Passwörter stimmen nicht überein.');
       return;
     }
+
     const updateData = {
-      username: form.username,
+      firstName: form.firstName,
+      lastName: form.lastName,
       email: form.email,
     };
     if (form.password) updateData.password = form.password;
@@ -58,10 +78,8 @@ function MyProfile() {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage('Profil erfolgreich aktualisiert.');
-        if (data.username && data.username !== user.username) {
-          logout(); // bei Username-Änderung neu einloggen lassen
-        }
+        setMessage('✅ Profil erfolgreich aktualisiert.');
+        setTimeout(() => setMessage(''), 3000);
       } else {
         setMessage(data.error || 'Fehler beim Aktualisieren');
       }
@@ -74,13 +92,30 @@ function MyProfile() {
 
   return (
     <div className="max-w-md mx-auto p-4">
-      <h2 className="text-2xl font-bold mb-4">Mein Profil</h2>
+      <h2 className="text-2xl font-bold mb-2">Mein Profil</h2>
+
+      {averageRatingInfo ? (
+        <p className="text-yellow-600 mb-4">
+          Meine Bewertung: ⭐ {averageRatingInfo.average} ({averageRatingInfo.total} Bewertung{averageRatingInfo.total === 1 ? '' : 'en'})
+        </p>
+      ) : (
+        <p className="text-gray-500 mb-4">Noch keine Bewertungen erhalten</p>
+      )}
+
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
-          name="username"
-          value={form.username}
+          name="firstName"
+          value={form.firstName}
           onChange={handleChange}
-          placeholder="Benutzername"
+          placeholder="Vorname"
+          className="border p-2 rounded"
+          required
+        />
+        <input
+          name="lastName"
+          value={form.lastName}
+          onChange={handleChange}
+          placeholder="Nachname"
           className="border p-2 rounded"
           required
         />
@@ -112,7 +147,11 @@ function MyProfile() {
         <button type="submit" className="bg-blue-600 text-white p-2 rounded">
           Profil aktualisieren
         </button>
-        {message && <p className="text-center text-sm mt-2">{message}</p>}
+        {message && (
+          <p className="text-center text-sm mt-2 text-green-600 animate-fade-in">
+            {message}
+          </p>
+        )}
       </form>
     </div>
   );

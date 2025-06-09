@@ -27,11 +27,11 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/ads/:id" element={<AdDetails />} />
         <Route path="/create" element={<PrivateRoute><CreateAd /></PrivateRoute>} />
-        <Route path="/meine-anzeigen" element={<PrivateRoute><MyAds /></PrivateRoute>} />
+        <Route path="/my-ads" element={<PrivateRoute><MyAds /></PrivateRoute>} /> {/* ✅ angepasst */}
         <Route path="/ads/edit/:id" element={<PrivateRoute><EditAd /></PrivateRoute>} />
-        <Route path="/mein-profil" element={<PrivateRoute><MyProfile /></PrivateRoute>} />
+        <Route path="/profile" element={<PrivateRoute><MyProfile /></PrivateRoute>} /> {/* ✅ angepasst */}
 
-        {/* Chats Seite ohne URL-ChatId */}
+        {/* Chat-Bereich */}
         <Route
           path="/chat"
           element={
@@ -43,6 +43,9 @@ function App() {
             </PrivateRoute>
           }
         />
+
+        {/* 404-Fallback */}
+        <Route path="*" element={<div className="p-4">Seite nicht gefunden</div>} />
       </Routes>
     </Router>
   );
