@@ -17,9 +17,10 @@ function AdDetails() {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [ad, setAd] = useState(null);
-  const [sellerRating, setSellerRating] = useState(null); // ⭐ NEU
+  const [sellerRating, setSellerRating] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // ✅ Galerie-Steuerung
 
   useEffect(() => {
     fetch(`http://localhost:5000/api/ads/${id}`)
@@ -29,8 +30,6 @@ function AdDetails() {
       })
       .then(data => {
         setAd(data);
-
-        // Verkäufer-Bewertung laden
         fetch(`http://localhost:5000/api/users/${data.userId}`)
           .then(res => res.json())
           .then(ratingData => {
@@ -52,7 +51,6 @@ function AdDetails() {
       alert('Bitte zuerst einloggen, um Nachrichten zu senden.');
       return;
     }
-
     try {
       const res = await fetch('http://localhost:5000/api/chats', {
         method: 'POST',
@@ -76,24 +74,65 @@ function AdDetails() {
   if (loading) return <p className="text-center mt-10">Lade Anzeige...</p>;
   if (error) return <p className="text-center mt-10 text-red-600">{error}</p>;
 
-  const imageUrl = ad.image ? `http://localhost:5000/uploads/${ad.image}` : null;
   const coords = ad.latitude && ad.longitude ? [ad.latitude, ad.longitude] : null;
+  const images = Array.isArray(ad.images) && ad.images.length > 0 ? ad.images : (ad.image ? [ad.image] : []);
 
   return (
     <div className="max-w-3xl mx-auto p-4">
       <Link to="/" className="text-blue-600 underline mb-4 inline-block">
         ← Zurück zur Übersicht
       </Link>
-      {imageUrl && (
-        <img
-          src={imageUrl}
-          alt={ad.title}
-          className="w-full max-h-96 object-cover rounded mb-4"
-        />
+
+      {/* Galerie */}
+      {images.length > 0 ? (
+        <div className="relative mb-4">
+          <img
+            src={`http://localhost:5000/uploads/${images[currentImageIndex]}`}
+            alt={`Bild ${currentImageIndex + 1}`}
+            className="w-full h-[400px] object-cover rounded"
+          />
+
+          {/* Zurück */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={() =>
+                  setCurrentImageIndex(prev =>
+                    prev === 0 ? images.length - 1 : prev - 1
+                  )
+                }
+                className="absolute top-1/2 left-0 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-r"
+              >
+                ‹
+              </button>
+
+              {/* Weiter */}
+              <button
+                onClick={() =>
+                  setCurrentImageIndex(prev =>
+                    prev === images.length - 1 ? 0 : prev + 1
+                  )
+                }
+                className="absolute top-1/2 right-0 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-l"
+              >
+                ›
+              </button>
+
+              {/* Bildzähler */}
+              <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                {currentImageIndex + 1} / {images.length}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="w-full h-60 bg-gray-200 flex items-center justify-center text-gray-500 mb-4">
+          Kein Bild vorhanden
+        </div>
       )}
+
       <h1 className="text-3xl font-bold mb-2">{ad.title}</h1>
 
-      {/* Verkäuferbewertung anzeigen */}
       {sellerRating ? (
         <p className="text-yellow-600 mb-2">
           Verkäuferbewertung: ⭐ {sellerRating.average} ({sellerRating.total} Bewertung{sellerRating.total === 1 ? '' : 'en'})

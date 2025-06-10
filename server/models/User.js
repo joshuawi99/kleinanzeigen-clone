@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+// ⭐ Optional: Du kannst diesen Befehl temporär beim Start einfügen,
+// um den alten `username`-Index zu löschen, falls vorhanden.
+mongoose.connection.once('open', () => {
+   mongoose.connection.db.collection('users').dropIndex('username_1').catch(() => {});
+ });
+
 const ratingSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   rating: { type: Number, min: 1, max: 5 }
