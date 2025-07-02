@@ -1,6 +1,7 @@
+// auth.js
 const jwt = require('jsonwebtoken');
 
-module.exports = (req, res, next) => {
+const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Kein Token vorhanden' });
@@ -17,3 +18,5 @@ module.exports = (req, res, next) => {
     res.status(403).json({ error: 'Token ungültig' });
   }
 };
+
+module.exports = verifyToken; // ✅ Default-Export

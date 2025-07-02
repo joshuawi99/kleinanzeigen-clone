@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AuthContext } from '../context/AuthContext';
+import PayPalButton from '../components/PayPalButton'; // ✅ PayPal-Integration
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -20,7 +21,7 @@ function AdDetails() {
   const [sellerRating, setSellerRating] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0); // ✅ Galerie-Steuerung
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     fetch(`http://localhost:5000/api/ads/${id}`)
@@ -83,7 +84,6 @@ function AdDetails() {
         ← Zurück zur Übersicht
       </Link>
 
-      {/* Galerie */}
       {images.length > 0 ? (
         <div className="relative mb-4">
           <img
@@ -91,8 +91,6 @@ function AdDetails() {
             alt={`Bild ${currentImageIndex + 1}`}
             className="w-full h-[400px] object-cover rounded"
           />
-
-          {/* Zurück */}
           {images.length > 1 && (
             <>
               <button
@@ -105,8 +103,6 @@ function AdDetails() {
               >
                 ‹
               </button>
-
-              {/* Weiter */}
               <button
                 onClick={() =>
                   setCurrentImageIndex(prev =>
@@ -117,8 +113,6 @@ function AdDetails() {
               >
                 ›
               </button>
-
-              {/* Bildzähler */}
               <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
                 {currentImageIndex + 1} / {images.length}
               </div>
@@ -148,12 +142,20 @@ function AdDetails() {
       <p className="text-sm text-gray-500 mb-1">PLZ: {ad.zipCode}</p>
 
       {user?.id !== ad.userId && (
-        <button
-          onClick={handleStartChat}
-          className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
-        >
-          Nachricht schreiben
-        </button>
+        <>
+          <button
+            onClick={handleStartChat}
+            className="bg-blue-600 text-white px-4 py-2 rounded mb-2"
+          >
+            Nachricht schreiben
+          </button>
+
+          {ad.price > 0 && (
+            <div className="mb-4">
+              <PayPalButton adId={ad._id} amount={ad.price} />
+            </div>
+          )}
+        </>
       )}
 
       {coords ? (

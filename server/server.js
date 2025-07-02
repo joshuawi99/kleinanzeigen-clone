@@ -16,11 +16,13 @@ app.use(express.json());
 const adRoutes = require('./routes/adRoutes');
 const userRoutes = require('./routes/userRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const paymentRoutes = require('./routes/payments');
 
 app.use('/api/ads', adRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/uploads', express.static('uploads'));
+app.use('/api/payments', paymentRoutes);
 
 
 // WebSocket initialisieren
