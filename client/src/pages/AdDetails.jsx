@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AuthContext } from '../context/AuthContext';
-import PayPalButton from '../components/PayPalButton'; // ✅ PayPal-Integration
+import PayPalButton from '../components/PayPalButton';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -145,13 +145,14 @@ function AdDetails() {
         <>
           <button
             onClick={handleStartChat}
-            className="bg-blue-600 text-white px-4 py-2 rounded mb-2"
+            className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
           >
             Nachricht schreiben
           </button>
 
           {ad.price > 0 && (
-            <div className="mb-4">
+            <div className="mb-6 p-4 border rounded shadow bg-gray-50">
+              <p className="font-semibold text-gray-700 mb-2">💳 Sofort kaufen mit PayPal:</p>
               <PayPalButton adId={ad._id} amount={ad.price} />
             </div>
           )}

@@ -1,5 +1,3 @@
-// server/controllers/paymentController.js
-
 const { paypalClient } = require('../utils/paypal');
 const checkoutNodeJssdk = require('@paypal/checkout-server-sdk');
 
@@ -31,5 +29,27 @@ exports.createOrder = async (req, res) => {
   } catch (error) {
     console.error('PayPal createOrder error:', error);
     res.status(500).json({ error: 'Could not create PayPal order.' });
+  }
+};
+
+exports.captureOrder = async (req, res) => {
+  const { orderID } = req.body;
+
+  if (!orderID) {
+    return res.status(400).json({ error: 'orderID fehlt' });
+  }
+
+  const request = new checkoutNodeJssdk.orders.OrdersCaptureRequest(orderID);
+  request.requestBody({});
+
+  try {
+    const response = await paypalClient().execute(request);
+    res.status(200).json({
+      message: 'Zahlung erfolgreich erfasst',
+      details: response.result,
+    });
+  } catch (error) {
+    console.error('PayPal captureOrder error:', error);
+    res.status(500).json({ error: 'Zahlung konnte nicht erfasst werden' });
   }
 };
